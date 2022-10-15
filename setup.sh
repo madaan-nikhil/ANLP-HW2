@@ -3,4 +3,5 @@ pip install beautifulsoup4
 python -m spacy download en_core_web_sm
 
 bash serve_grobid.sh
-# Set JAVA_HOME -- Java installation
+# sudo apt install openjdk-8-jdk
+# export JAVA_HOME=path-to-java

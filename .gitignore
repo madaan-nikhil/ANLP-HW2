@@ -2,3 +2,5 @@ grobid-*
 .ipynb_checkpoints/*
 *.pkl
 data/*
+*.zip
+

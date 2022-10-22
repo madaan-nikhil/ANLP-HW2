@@ -52,8 +52,10 @@ if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
     print(f'Loading data')
-    file_path = "dataloaders/project-2-at-2022-10-22-19-26-4e2271c2.conll"
-    train_dataset, val_dataset = get_loaders(file_path=file_path, val_size=0.2)
+    file_path = "dataloaders/project-2-at-2022-10-22-19-26-4e2271c2.conll" # set args.data_dir
+    train_dataset, val_dataset = get_loaders(file_path=file_path, 
+                                            val_size=0.2, 
+                                            tokenizer = AutoTokenizer.from_pretrained(args.model_name))
     
     train_loader = torch.utils.data.DataLoader(train_dataset, 
                                            batch_size=args.batch_size, 

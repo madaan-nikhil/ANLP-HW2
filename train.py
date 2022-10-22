@@ -29,7 +29,7 @@ def _load_model(model_dir, filename, model, device):
 
 if __name__ == '__main__': 
     
-    NUM_LABELS = ?
+    NUM_LABELS = 7
     
     parser = argparse.ArgumentParser()
 

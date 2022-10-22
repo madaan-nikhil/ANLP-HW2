@@ -6,6 +6,7 @@ from transformers import DistilBertTokenizerFast
 from sklearn.model_selection import train_test_split
 import numpy as np
 import torch
+from collections import defaultdict
 
 def tokenize_and_align_labels(tags, encodings, tag2id):
         labels = []
@@ -68,13 +69,13 @@ def read_conll(file_path):
     return token_docs, tag_docs
 
 
-def get_loaders(file_path, val_size=0.2):
+def get_loaders(file_path, val_size=0.2, tokenizer=None):
     
     texts, tags = read_conll(file_path)
     unique_tags = set(tag for doc in tags for tag in doc)
     tag2id = {tag: id for id, tag in enumerate(unique_tags)}
     id2tag = {id: tag for tag, id in tag2id.items()}
-    tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-cased')
+    # tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-cased')
 
     train_texts, val_texts, train_tags, val_tags = train_test_split(texts, tags, test_size=val_size)
 
@@ -99,11 +100,23 @@ class SciDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         item = {key: torch.tensor(val[idx]) for key, val in self.encodings.items()}
-        item['labels'] = torch.tensor(self.labels[idx])
-        return item
+        labels = torch.tensor(self.labels[idx])
+        (return item, labels)
 
     def __len__(self):
         return len(self.labels)
+
+    @staticmethod
+    def collate_batch(batch):
+        X = [d[1] for d in batch]
+        keys = list(d[0].keys())
+        inputs = defaultdict(list)
+        for x in X:
+            for key in keys:
+                inputs[key].append(x[key])
+        
+        Y = [d[1] for d in batch]
+        return inputs, Y
 
 
 if __name__ == "__main__":

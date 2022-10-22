@@ -8,6 +8,7 @@ import pandas as pd
 from transformers import AutoModel, AutoTokenizer
 from trainer import *
 from model import *
+from dataloaders.conll_dataloader import *
 
 
 def _load_model(model_dir, filename, model, device):
@@ -51,7 +52,18 @@ if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
     print(f'Loading data')
-    train, val, test = # get dataloaders
+    file_path = "dataloaders/project-2-at-2022-10-22-19-26-4e2271c2.conll"
+    train_dataset, val_dataset = get_loaders(file_path=file_path, val_size=0.2)
+    
+    train_loader = torch.utils.data.DataLoader(train_dataset, 
+                                           batch_size=args.batch_size, 
+                                           shuffle=False, 
+                                           collate_fn=SciDataset.collate_batch)
+    
+    val_loader = torch.utils.data.DataLoader(val_dataset, 
+                                           batch_size=args.batch_size, 
+                                           shuffle=False, 
+                                           collate_fn=SciDataset.collate_batch)
     print(f'Data Loaded')
     
     model_name = args.model_name 
@@ -68,9 +80,6 @@ if __name__ == '__main__':
         model = _load_model(args.model_dir, filename=args.model_file, model=model, device=device)
     
     
-    train_loader = # initialize train loader
-    dev_loader = # initialize val loader
-    
     optimizer = AdamW(model.parameters(), lr=args.lr)
     schedular = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=2, factor=0.5, min_lr=1e-8)
     criterion = torch.nn.CrossEntropyLoss()
@@ -84,6 +93,6 @@ if __name__ == '__main__':
                         scheduler,
                         criterion,
                         train_loader,
-                        dev_loader,
+                        val_loader,
                         device,
                         args.model_dir)

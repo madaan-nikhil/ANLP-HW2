@@ -3,4 +3,4 @@ grobid-*
 *.pkl
 data/*
 *.zip
-
+*.json

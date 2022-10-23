@@ -29,7 +29,7 @@ def _load_model(model_dir, filename, model, device):
 
 if __name__ == '__main__': 
     
-    NUM_LABELS = 7
+    NUM_LABELS = 15
     
     parser = argparse.ArgumentParser()
 
@@ -46,6 +46,7 @@ if __name__ == '__main__':
     parser.add_argument('--model_dir', help="model directory")
     parser.add_argument('--model_file', help="model_file")
     parser.add_argument('--model_name', type=str, default="allenai/scibert_scivocab_cased", help="resume training")
+
 
     args, _ = parser.parse_known_args()
     

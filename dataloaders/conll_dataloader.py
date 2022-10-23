@@ -93,7 +93,9 @@ def get_loaders(file_path, val_size=0.2, tokenizer=None, batch_size = 10):
     train_dataset = SciDataset(train_encodings, train_labels,stride=1024)
     val_dataset = SciDataset(val_encodings, val_labels,stride=1024)
 
-    return train_dataset, val_dataset
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=train_dataset.collate_batch)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, collate_fn=val_dataset.collate_batch)
+    return train_loader, val_loader
 
 class SciDataset(torch.utils.data.Dataset):
     def __init__(self, encodings, labels, window_size = 512, stride=512, O_fraction=0.9):
@@ -155,10 +157,14 @@ class SciDataset(torch.utils.data.Dataset):
 if __name__ == "__main__":
     file_path = "dataloaders/project-2-at-2022-10-22-19-26-4e2271c2.conll"
     tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-cased')
-    train_dataset, val_dataset = get_loaders(file_path=file_path, val_size=0.2, tokenizer=tokenizer)
-    example,_ = train_dataset[0]
+    train_loader, val_loader = get_loaders(file_path=file_path, val_size=0.2, tokenizer=tokenizer)
+    example,labels = next(iter(train_loader))
+    print(f"labels: {labels[0][50:]}")
+    print(f"labels: {labels[1][50:]}")
     for k,v in example.items():
-        if 'input_ids' == k:
-            
-            print(tokenizer.convert_ids_to_tokens(v)[:50])
-        print(f"{k}: {v[:50]}")
+        print(v.shape)
+        if 'input_ids' == k:     
+            print(tokenizer.convert_ids_to_tokens(v[0])[:50])
+            print(tokenizer.convert_ids_to_tokens(v[1])[:50])
+        print(f"{k}: {v[0][:50]}")
+        print(f"{k}: {v[1][:50]}")

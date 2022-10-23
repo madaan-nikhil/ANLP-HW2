@@ -7,7 +7,9 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 import torch
 from collections import defaultdict
+from torch.utils.data import DataLoader
 
+PAD_NUM = -100
 def tokenize_and_align_labels(tags, encodings, tag2id):
         labels = []
         for i, label in enumerate(tags):
@@ -15,17 +17,17 @@ def tokenize_and_align_labels(tags, encodings, tag2id):
             previous_word_idx = None
             label_ids = []
             for word_idx in word_ids:
-                # Special tokens have a word id that is None. We set the label to -100 so they are automatically
+                # Special tokens have a word id that is None. We set the label to PAD_NUM so they are automatically
                 # ignored in the loss function.
                 if word_idx is None:
-                    label_ids.append(-100)
+                    label_ids.append(PAD_NUM)
                 # We set the label for the first token of each word.
                 elif word_idx != previous_word_idx:
                     label_ids.append(tag2id[label[word_idx]])
-                # For the other tokens in a word, we set the label to either the current label or -100, depending on
+                # For the other tokens in a word, we set the label to either the current label or PAD_NUM, depending on
                 # the label_all_tokens flag.
                 else:
-                    label_ids.append(-100)
+                    label_ids.append(PAD_NUM)
                 previous_word_idx = word_idx
 
             labels.append(label_ids)
@@ -36,11 +38,11 @@ def encode_tags(tags, encodings, tag2id):
     labels = [[tag2id[tag] for tag in doc] for doc in tags]
     encoded_labels = []
     for doc_labels, doc_offset in zip(labels, encodings.offset_mapping):
-        # create an empty array of -100
-        doc_enc_labels = np.ones(len(doc_offset),dtype=int) * -100
+        # create an empty array of PAD_NUM
+        doc_enc_labels = np.ones(len(doc_offset),dtype=int) * PAD_NUM
         arr_offset = np.array(doc_offset)
         # set labels whose first offset position is 0 and the second is not 0
-        print(len(doc_enc_labels[(arr_offset[:,0] == 0) & (arr_offset[:,1] != 0)]), len(doc_labels))
+        # print(len(doc_enc_labels[(arr_offset[:,0] == 0) & (arr_offset[:,1] != 0)]), len(doc_labels))
         doc_enc_labels[(arr_offset[:,0] == 0) & (arr_offset[:,1] != 0)] = doc_labels
         encoded_labels.append(doc_enc_labels.tolist())
 
@@ -69,7 +71,7 @@ def read_conll(file_path):
     return token_docs, tag_docs
 
 
-def get_loaders(file_path, val_size=0.2, tokenizer=None):
+def get_loaders(file_path, val_size=0.2, tokenizer=None, batch_size = 10):
     
     texts, tags = read_conll(file_path)
     unique_tags = set(tag for doc in tags for tag in doc)
@@ -88,34 +90,54 @@ def get_loaders(file_path, val_size=0.2, tokenizer=None):
     train_encodings.pop("offset_mapping") # we don't want to pass this to the model
     val_encodings.pop("offset_mapping")
     # print(train_texts[0][:50])
-    train_dataset = SciDataset(train_encodings, train_labels)
-    val_dataset = SciDataset(val_encodings, val_labels)
+    train_dataset = SciDataset(train_encodings, train_labels,stride=1024)
+    val_dataset = SciDataset(val_encodings, val_labels,stride=1024)
 
     return train_dataset, val_dataset
 
 class SciDataset(torch.utils.data.Dataset):
-    def __init__(self, encodings, labels):
+    def __init__(self, encodings, labels, window_size = 512, stride=10):
         self.encodings = encodings
         self.labels = labels
+        self.window_size = window_size
+        self.stride = stride
+        self.pads ={'input_ids':0, 'attention_mask':0, 'token_type_ids': 0}
 
     def __getitem__(self, idx):
-        item = {key: torch.tensor(val[idx]) for key, val in self.encodings.items()}
-        labels = torch.tensor(self.labels[idx])
+        item = {key: self.sliding_window_overlap(torch.tensor(val[idx]),pad_val=self.pads[key]) for key, val in self.encodings.items()}
+        labels = self.sliding_window_overlap(torch.tensor(self.labels[idx]))
         return (item, labels)
 
     def __len__(self):
         return len(self.labels)
+
+    def sliding_window_overlap(self, x, pad_val=PAD_NUM):
+        i = 0
+        curr_inp = []
+        while i < x.shape[0]:
+            if i + self.window_size >= x.shape[0]:
+                pad_vals = torch.tensor([pad_val]*(self.window_size-len(x[i:])))
+                new_tens = torch.cat([x[i:],pad_vals],0)
+                curr_inp.append(new_tens)
+            else:
+                curr_inp.append(x[i:i+self.window_size])
+            i += self.stride
+
+        return torch.stack(curr_inp,0)
+
 
     @staticmethod
     def collate_batch(batch):
         X = [d[0] for d in batch]
         keys = list(X[0].keys())
         inputs = defaultdict(list)
-        for x in X:
-            for key in keys:
+        for key in keys:
+            for x in X:
+                # print(x[key].shape)
                 inputs[key].append(x[key])
-        
-        Y = [d[1] for d in batch]
+            inputs[key] = torch.cat(inputs[key],0)
+
+        Y = torch.cat([d[1] for d in batch],0)
         return inputs, Y
 
 

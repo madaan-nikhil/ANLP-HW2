@@ -98,6 +98,7 @@ if __name__ == '__main__':
                         train_loader,
                         val_loader,
                         device,
-                        args.model_dir)
+                        args.model_dir,
+                        NUM_LABELS)
 
         trainer.fit()

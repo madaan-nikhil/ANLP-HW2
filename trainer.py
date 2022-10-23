@@ -66,10 +66,11 @@ class Trainer:
         num_correct = 0
         # Cumulative loss over all batches or Avg Loss * num_batches
         total_loss_epoch = 0
+        num_datapoints = 0
 
         # Iterate one batch at a time
         for i_batch, (im_batch, id_batch) in enumerate(self.train_loader):
-            im_batch = im_batch.to(self.device)
+            im_batch = {k: torch.as_tensor(v).to(device=self.device) for k, v in im_batch.items()}
             id_batch = id_batch.to(self.device)
 
             # Get predictions (forward pass)
@@ -124,7 +125,7 @@ class Trainer:
             # Get batches from DEV loader
             for i_batch, (im_batch, id_batch) in enumerate(self.dev_loader):
                 # Class predictions
-                im_batch = im_batch.to(self.device)
+                im_batch = {k: torch.as_tensor(v).to(device=self.device) for k, v in im_batch.items()}
                 id_batch = id_batch.to(self.device)
 
                 logits = self.model(im_batch)

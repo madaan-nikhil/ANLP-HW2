@@ -17,7 +17,7 @@ class TokenClassification(nn.Module):
     
     def forward(self, input):
         
-        outputs = self.distilbert(
+        outputs = self.feature_extractor(
             **input
         )
 

@@ -10,7 +10,7 @@ class TokenClassification(nn.Module):
                 hidden_size,
                 dropout):
         super(TokenClassification, self).__init__()
-        self.feature_extractor = encoder
+        self.feature_extractor = feature_extractor
         self.dropout = nn.Dropout(dropout)
         self.classifier = nn.Linear(hidden_size, num_labels)
         self.device = device

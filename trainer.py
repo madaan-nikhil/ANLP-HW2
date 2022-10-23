@@ -78,20 +78,22 @@ class Trainer:
             # Mixed precision
             with torch.cuda.amp.autocast():  
                 logits = self.model(im_batch)
-                loss_batch = self.criterion(logits.view(-1, self.num_classes), id_batch.view(-1))      
+                loss_batch = self.criterion(logits.reshape(-1, self.num_classes), id_batch.reshape(-1))      
             
             self.scaler.scale(loss_batch).backward()
             self.scaler.step(self.optimizer) 
             self.scaler.update()
 
-            self.scheduler.step()
-
             # Performance metrics
             total_loss_epoch += loss_batch
-            num_correct      += int((torch.argmax(logits, axis=1) == id_batch).sum())
+            preds             = torch.argmax(logits.reshape(-1, self.num_classes), axis=1)
+            target            = id_batch.reshape(-1)
+            num_correct      += int((target == preds).sum())
             avg_loss_epoch    = float(total_loss_epoch / (i_batch + 1))
-            acc_epoch         = 100 * num_correct / ((i_batch + 1) * self.train_loader.batch_size)
-
+            num_datapoints   += target.shape[0]
+            acc_epoch         = 100 * num_correct / num_datapoints
+            
+            self.scheduler.step(avg_loss_epoch)
             # Performance tracking verbose
             batch_bar.set_postfix(
                 acc="{:.3f}%".format(acc_epoch),
@@ -115,6 +117,7 @@ class Trainer:
 
         total_loss_dev = 0
         num_correct    = 0
+        num_datapoints = 0
 
         # Do not store gradients 
         with torch.no_grad():
@@ -126,12 +129,15 @@ class Trainer:
 
                 logits = self.model(im_batch)
 
-                loss_batch = self.criterion(logits.view(-1, self.num_classes), id_batch.view(-1))
+                loss_batch = self.criterion(logits.reshape(-1, self.num_classes), id_batch.reshape(-1))
 
                 total_loss_dev += loss_batch
-                num_correct    += int((torch.argmax(logits, axis=1) == id_batch).sum())
+                preds = torch.argmax(logits.reshape(-1, self.num_classes), axis=1)
+                target = id_batch.reshape(-1)
+                num_correct += int((target == preds).sum())
+                num_datapoints += target.shape[0]
 
-        acc_dev      = 100 * num_correct / (len(self.dev_loader) * self.dev_loader.batch_size)
+        acc_dev      = 100 * num_correct / num_datapoints
         avg_loss_dev = float(total_loss_dev / (i_batch + 1))
 
         return avg_loss_dev, acc_dev

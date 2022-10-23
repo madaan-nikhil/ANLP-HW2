@@ -101,15 +101,15 @@ class SciDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         item = {key: torch.tensor(val[idx]) for key, val in self.encodings.items()}
         labels = torch.tensor(self.labels[idx])
-        (return item, labels)
+        return (item, labels)
 
     def __len__(self):
         return len(self.labels)
 
     @staticmethod
     def collate_batch(batch):
-        X = [d[1] for d in batch]
-        keys = list(d[0].keys())
+        X = [d[0] for d in batch]
+        keys = list(X[0].keys())
         inputs = defaultdict(list)
         for x in X:
             for key in keys:

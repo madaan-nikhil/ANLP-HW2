@@ -55,7 +55,7 @@ if __name__ == '__main__':
     file_path = "dataloaders/project-2-at-2022-10-22-19-26-4e2271c2.conll" # set args.data_dir
     train_dataset, val_dataset = get_loaders(file_path=file_path, 
                                             val_size=0.2, 
-                                            tokenizer = AutoTokenizer.from_pretrained(args.model_name))
+                                            tokenizer = AutoTokenizer.from_pretrained(args.model_name, padding="longest"))
     
     train_loader = torch.utils.data.DataLoader(train_dataset, 
                                            batch_size=args.batch_size, 
@@ -71,7 +71,7 @@ if __name__ == '__main__':
     model_name = args.model_name 
     # Download pytorch model
     feature_extractor = AutoModel.from_pretrained(model_name)
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    tokenizer = AutoTokenizer.from_pretrained(model_name, padding="longest")
     model = TokenClassification(feature_extractor,
                                 device,
                                 NUM_LABELS,
@@ -92,9 +92,11 @@ if __name__ == '__main__':
         trainer = Trainer(model,
                         args.epochs,
                         optimizer,
-                        scheduler,
+                        schedular,
                         criterion,
                         train_loader,
                         val_loader,
                         device,
                         args.model_dir)
+
+        trainer.fit()

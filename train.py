@@ -35,7 +35,7 @@ if __name__ == '__main__':
 
     # hyperparameters sent by the client are passed as command-line arguments to the script.
     parser.add_argument('--epochs', type=int, default=50, help="num of epochs")
-    parser.add_argument('--batch_size', type=int, default=32, help="batch size")
+    parser.add_argument('--batch_size', type=int, default=1, help="batch size")
     parser.add_argument('--lr', type=float, default=0.00001, help="learning rate")
     parser.add_argument('--use-cuda', type=bool, default=False)# not used
     parser.add_argument('--resume', type=int, default=0, help="resume training")

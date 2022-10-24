@@ -96,7 +96,8 @@ def get_loaders(file_path, val_size=0.2, tokenizer=None, batch_size = 10):
     return train_dataset, val_dataset
 
 class SciDataset(torch.utils.data.Dataset):
-    def __init__(self, encodings, labels, window_size = 512, stride=10):
+    def __init__(self, encodings, labels, window_size = 512, stride=512, O_fraction=0.9):
+        self.O_fraction = O_fraction
         self.encodings = encodings
         self.labels = labels
         self.window_size = window_size
@@ -106,7 +107,17 @@ class SciDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         item = {key: self.sliding_window_overlap(torch.tensor(val[idx]),pad_val=self.pads[key]) for key, val in self.encodings.items()}
         labels = self.sliding_window_overlap(torch.tensor(self.labels[idx]))
-        return (item, labels)
+        O_nums = int(self.O_fraction)*len(labels)
+
+        labels_O_nums = (labels==PAD_NUM).sum(dim=1)
+        mask = labels_O_nums <= O_nums
+
+        if not mask.sum(): # if none selected, select atleast 2 
+            mask = np.random.choice(len(labels),2)
+
+        item = {key : val[mask] for key, val in item.items()}
+        labels = labels[mask]
+        return item, labels
 
     def __len__(self):
         return len(self.labels)

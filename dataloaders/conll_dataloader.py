@@ -8,7 +8,7 @@ import numpy as np
 import torch
 from collections import defaultdict
 from torch.utils.data import DataLoader
-
+tag2id_path = "tag2id.txt"
 PAD_NUM = -100
 def tokenize_and_align_labels(tags, encodings, tag2id):
         labels = []
@@ -75,14 +75,20 @@ def get_loaders(file_path, val_size=0.2, tokenizer=None, batch_size = 10):
     global tag2id
     texts, tags = read_conll(file_path)
     unique_tags = set(tag for doc in tags for tag in doc)
-    tag2id = {tag: id for id, tag in enumerate(unique_tags)}
+    tag2id = {}
+    with open('dataloaders/tag2id.txt','r') as fp:
+        lines = fp.readlines()
+    for line in lines:
+        k,v = line.split()
+        tag2id[k] = int(v)
+
     id2tag = {id: tag for tag, id in tag2id.items()}
     # tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-cased')
 
     train_texts, val_texts, train_tags, val_tags = train_test_split(texts, tags, test_size=val_size)
 
-    train_encodings = tokenizer(train_texts, is_split_into_words=True, return_offsets_mapping=True, padding=True, truncation=False)
-    val_encodings = tokenizer(val_texts, is_split_into_words=True, return_offsets_mapping=True, padding=True, truncation=False)
+    train_encodings = tokenizer(train_texts, is_split_into_words=True, return_offsets_mapping=True, padding=False, truncation=False)
+    val_encodings = tokenizer(val_texts, is_split_into_words=True, return_offsets_mapping=True, padding=False, truncation=False)
 
     train_labels = tokenize_and_align_labels(train_tags, train_encodings, tag2id)
     val_labels = tokenize_and_align_labels(val_tags, val_encodings, tag2id)
@@ -111,7 +117,7 @@ class SciDataset(torch.utils.data.Dataset):
         labels = self.sliding_window_overlap(torch.tensor(self.labels[idx]))
         O_nums = int(self.O_fraction)*len(labels)
 
-        labels_O_nums = (labels==PAD_NUM).sum(dim=1)
+        labels_O_nums = (labels==tag2id['O']).sum(dim=1)
         mask = labels_O_nums <= O_nums
        
         if not mask.sum(): # if none selected, select atleast 2 

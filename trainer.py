@@ -116,6 +116,12 @@ class Trainer:
             if epoch > 1:
                 is_best = self.tracker.isLarger('dev_acc', dev_acc)
 
+            
+            self.tracker.update(epoch=epoch,
+                                train_loss=train_loss,
+                                train_acc=train_acc,
+                                dev_loss=dev_loss,
+                                dev_acc=dev_acc)
 
             self.save_checkpoint(epoch, is_best)
 

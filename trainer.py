@@ -147,6 +147,9 @@ class Trainer:
             im_batch = {k: torch.as_tensor(v).to(device=self.device) for k, v in im_batch.items()}
             id_batch = id_batch.to(self.device)
 
+            if torch.where(id_batch!=-100)[0].shape[0] == 0:
+              continue
+
             # Get predictions (forward pass)
             self.optimizer.zero_grad()
         

@@ -10,24 +10,35 @@ from collections import defaultdict
 from torch.utils.data import DataLoader
 tag2id_path = "tag2id.txt"
 PAD_NUM = -100
+np.random.seed(0)
+
 def tokenize_and_align_labels(tags, encodings, tag2id):
         labels = []
         for i, label in enumerate(tags):
             word_ids = encodings.word_ids(batch_index=i)
+            # tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-cased')
+            # print(tokenizer.convert_ids_to_tokens(encodings['input_ids'][i][:20]))
+            # print(tokenizer('verify'))
             previous_word_idx = None
             label_ids = []
+            # print(word_ids[:20])
+            # blah
             for word_idx in word_ids:
                 # Special tokens have a word id that is None. We set the label to PAD_NUM so they are automatically
                 # ignored in the loss function.
                 if word_idx is None:
                     label_ids.append(PAD_NUM)
                 # We set the label for the first token of each word.
-                elif word_idx != previous_word_idx:
+                elif word_idx != previous_word_idx and tag2id[label[word_idx]] != 13:
                     label_ids.append(tag2id[label[word_idx]])
                 # For the other tokens in a word, we set the label to either the current label or PAD_NUM, depending on
                 # the label_all_tokens flag.
+                elif tag2id[label[word_idx]] == 13:
+                    label_ids.append(tag2id[label[word_idx]])
+
                 else:
                     label_ids.append(PAD_NUM)
+                
                 previous_word_idx = word_idx
 
             labels.append(label_ids)
@@ -85,7 +96,7 @@ def get_loaders(file_path, val_size=0.2, tokenizer=None, batch_size = 10):
     id2tag = {id: tag for tag, id in tag2id.items()}
     # tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-cased')
 
-    train_texts, val_texts, train_tags, val_tags = train_test_split(texts, tags, test_size=val_size)
+    train_texts, val_texts, train_tags, val_tags = train_test_split(texts, tags, test_size=val_size, random_state=0)
 
     train_encodings = tokenizer(train_texts, is_split_into_words=True, return_offsets_mapping=True, padding=False, truncation=False)
     val_encodings = tokenizer(val_texts, is_split_into_words=True, return_offsets_mapping=True, padding=False, truncation=False)
@@ -115,16 +126,17 @@ class SciDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         item = {key: self.sliding_window_overlap(torch.tensor(val[idx]),pad_val=self.pads[key]) for key, val in self.encodings.items()}
         labels = self.sliding_window_overlap(torch.tensor(self.labels[idx]))
-        O_nums = int(self.O_fraction)*len(labels)
+        O_nums = int(self.O_fraction)*labels.shape[1]
 
         labels_O_nums = (labels==tag2id['O']).sum(dim=1)
         mask = labels_O_nums <= O_nums
        
         if not mask.sum(): # if none selected, select atleast 2 
             mask = np.random.choice(len(labels),2)
-        
+        print(f"before: {len(labels)}")
         item = {key : val[mask] for key, val in item.items()}
         labels = labels[mask]
+        print(f"after: {len(labels)}")
         return (item, labels)
 
     def __len__(self):

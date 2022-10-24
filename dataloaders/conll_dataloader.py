@@ -154,10 +154,11 @@ class SciDataset(torch.utils.data.Dataset):
 
 if __name__ == "__main__":
     file_path = "dataloaders/project-2-at-2022-10-22-19-26-4e2271c2.conll"
-    train_dataset, val_dataset = get_loaders(file_path=file_path, val_size=0.2)
-    example = train_dataset[0]
+    tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-cased')
+    train_dataset, val_dataset = get_loaders(file_path=file_path, val_size=0.2, tokenizer=tokenizer)
+    example,_ = train_dataset[0]
     for k,v in example.items():
         if 'input_ids' == k:
-            tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-cased')
+            
             print(tokenizer.convert_ids_to_tokens(v)[:50])
         print(f"{k}: {v[:50]}")

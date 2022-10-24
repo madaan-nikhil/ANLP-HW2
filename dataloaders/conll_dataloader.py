@@ -72,7 +72,7 @@ def read_conll(file_path):
 
 
 def get_loaders(file_path, val_size=0.2, tokenizer=None, batch_size = 10):
-    
+    global tag2id
     texts, tags = read_conll(file_path)
     unique_tags = set(tag for doc in tags for tag in doc)
     tag2id = {tag: id for id, tag in enumerate(unique_tags)}
@@ -105,21 +105,20 @@ class SciDataset(torch.utils.data.Dataset):
         self.window_size = window_size
         self.stride = stride
         self.pads ={'input_ids':0, 'attention_mask':0, 'token_type_ids': 0}
+        self.O_fraction = O_fraction
 
     def __getitem__(self, idx):
         item = {key: self.sliding_window_overlap(torch.tensor(val[idx]),pad_val=self.pads[key]) for key, val in self.encodings.items()}
         labels = self.sliding_window_overlap(torch.tensor(self.labels[idx]))
         O_nums = int(self.O_fraction)*len(labels)
 
-        labels_O_nums = (labels==PAD_NUM).sum(dim=1)
+        labels_O_nums = (labels==tag2id('O')).sum(dim=1)
         mask = labels_O_nums <= O_nums
-
-        if not mask.sum(): # if none selected, select atleast 2 
-            mask = np.random.choice(len(labels),2)
 
         item = {key : val[mask] for key, val in item.items()}
         labels = labels[mask]
-        return item, labels
+
+        return (item, labels)
 
     def __len__(self):
         return len(self.labels)
@@ -135,8 +134,8 @@ class SciDataset(torch.utils.data.Dataset):
             else:
                 curr_inp.append(x[i:i+self.window_size])
             i += self.stride
-
-        return torch.stack(curr_inp,0)
+        batch = torch.stack(curr_inp,0)
+        return batch
 
 
     @staticmethod

@@ -240,18 +240,11 @@ class Trainer:
         # Do not store gradients 
         with torch.no_grad():
             # Get batches from DEV loader
-            for i_batch, (im_batch, id_batch) in enumerate(data_loader):
+            for i_batch, (im_batch) in enumerate(data_loader):
                 # Class predictions
                 im_batch = {k: torch.as_tensor(v).to(device=self.device) for k, v in im_batch.items()}
-                id_batch = id_batch.to(self.device)
-
                 logits = self.model(im_batch)
-
-                loss_batch = self.criterion(logits.reshape(-1, self.num_classes), id_batch.reshape(-1))
-
-                total_loss_dev += loss_batch
                 preds = torch.argmax(logits.reshape(-1, self.num_classes), axis=1)
-
                 predictions.append(preds)
         
         return predictions
@@ -279,7 +272,7 @@ class Trainer:
 
     def save_predictions(self, predictions, pred_path):
         with open(pred_path, 'wb') as f:
-            pickle.dump(predictions)
+            pickle.dump(predictions, f)
 
     def epochVerbose(self, epoch, train_loss, train_acc, dev_loss, dev_acc):
         log = "\nEpoch: {}/{} summary:".format(epoch, self.epochs)

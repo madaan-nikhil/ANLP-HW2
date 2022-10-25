@@ -170,7 +170,7 @@ class SciDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         item = {key: self.sliding_window_overlap(torch.tensor(val[idx]),pad_val=self.pads[key]) for key, val in self.encodings.items()}
         if self.labels is None:
-            return item
+            return (item, None)
         labels = self.sliding_window_overlap(torch.tensor(self.labels[idx]))
         O_nums = int(self.O_fraction)*labels.shape[1]
 
@@ -186,7 +186,7 @@ class SciDataset(torch.utils.data.Dataset):
         return (item, labels)
 
     def __len__(self):
-        return len(self.labels)
+        return len(self.encodings)
 
     def sliding_window_overlap(self, x, pad_val=PAD_NUM):
         i = 0
@@ -205,10 +205,9 @@ class SciDataset(torch.utils.data.Dataset):
 
     @staticmethod
     def collate_batch(batch):
-        if len(batch[0]) ==2 :
-            X = [d[0] for d in batch]
-        else:
-            X = [d for d in batch]
+        
+
+        X = [d[0] for d in batch]
 
         keys = list(X[0].keys())
         inputs = defaultdict(list)
@@ -217,8 +216,8 @@ class SciDataset(torch.utils.data.Dataset):
                 # print(x[key].shape)
                 inputs[key].append(x[key])
             inputs[key] = torch.cat(inputs[key],0)
-        if len(batch[0]) !=2:
-            print(inputs)
+        if batch[0][1] is None :
+            # print(inputs)
             return inputs
 
         Y = torch.cat([d[1] for d in batch],0)

@@ -83,7 +83,7 @@ def read_conll(file_path):
 
 
 def get_loaders(file_path, val_size=0.2, tokenizer=None, batch_size = 10):
-    global tag2id
+    global tag2id, id2tag
     texts, tags = read_conll(file_path)
     unique_tags = set(tag for doc in tags for tag in doc)
     tag2id = {}
@@ -158,7 +158,7 @@ def save_output(outputs, tokenizer, file_path):
     output_file.write('\n')
 
 class SciDataset(torch.utils.data.Dataset):
-    def __init__(self, encodings, labels, window_size = 512, stride=10, O_fraction=0.9):
+    def __init__(self, encodings, labels=None, window_size = 512, stride=10, O_fraction=0.9):
         self.encodings = encodings
         self.labels = labels
         self.window_size = window_size
@@ -168,6 +168,8 @@ class SciDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         item = {key: self.sliding_window_overlap(torch.tensor(val[idx]),pad_val=self.pads[key]) for key, val in self.encodings.items()}
+        if self.labels is None:
+            return item
         labels = self.sliding_window_overlap(torch.tensor(self.labels[idx]))
         O_nums = int(self.O_fraction)*labels.shape[1]
 

@@ -118,24 +118,25 @@ def get_test_loader( tokenizer=DistilBertTokenizerFast.from_pretrained('distilbe
                      file_path='dataloaders/test_data.txt', 
                      window_size=512):
     test_file = open(file_path, 'r')
-    test_raw_data = " ".join(test_file.readlines())
+    test_raw_data = " ".join(test_file.readlines()).strip()
     test_texts = []
     # split using docstart to get all papers
     test_texts = re.split('-DOCSTART- ',test_raw_data)
     # split using newlines to get all paragraphs
     test_texts = [text.split('\n') for text in test_texts]
-    test_texts = [st.strip() for text in test_texts for st in text]
-
-    
+    test_texts = [st.strip().split() for text in test_texts for st in text ]
+    # test_texts = [[s for s in text if len(s)] for text in test_texts]
     test_token_data = [] # List[List[str]]
     for line in test_texts:
         if not len(line):
+            print("error",line)
             continue
-        test_token_data.append(line.split()) # List[str]
-
+        test_token_data.append(line) # List[str]
+    # print(test_token_data[0])
     test_encodings = tokenizer(test_token_data, is_split_into_words=True, return_offsets_mapping=True, padding=False, truncation=False)
     test_encodings.pop("offset_mapping")
-    test_loader = SciDataset(test_encodings,window_size=window_size, stride=window_size)
+    test_dataset = SciDataset(test_encodings,window_size=window_size, stride=window_size)
+    test_loader = DataLoader(test_dataset,batch_size=1,shuffle=False, collate_fn=test_dataset.collate_batch)
 
     return test_loader
 
@@ -204,7 +205,11 @@ class SciDataset(torch.utils.data.Dataset):
 
     @staticmethod
     def collate_batch(batch):
-        X = [d[0] for d in batch]
+        if len(batch[0]) ==2 :
+            X = [d[0] for d in batch]
+        else:
+            X = [d for d in batch]
+
         keys = list(X[0].keys())
         inputs = defaultdict(list)
         for key in keys:
@@ -212,6 +217,9 @@ class SciDataset(torch.utils.data.Dataset):
                 # print(x[key].shape)
                 inputs[key].append(x[key])
             inputs[key] = torch.cat(inputs[key],0)
+        if len(batch[0]) !=2:
+            print(inputs)
+            return inputs
 
         Y = torch.cat([d[1] for d in batch],0)
         return inputs, Y

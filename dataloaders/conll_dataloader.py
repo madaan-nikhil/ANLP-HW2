@@ -147,16 +147,16 @@ def save_output(outputs, tokenizer, file_path):
     input_ids: Tensor[N,window_size]
     preds: Tensor[N,window_size]
     '''
-    input_ids = outputs['input_ids']
-    preds = outputs['preds']
     output_file = open(file_path,'a+')
-    for window, window_pred in zip(input_ids, preds):
-        tokens = tokenizer.convert_ids_to_tokens(window)
-        for token, pred in zip(tokens, window_pred):
+    for output in outputs:
+        input_ids = output['input_ids']
+        preds = output['preds'].cpu().numpy().astype(int)
+        tokens = tokenizer.convert_ids_to_tokens(input_ids)
+        for token, pred in zip(tokens, preds):
             if token in ['[CLS],[PAD]','[SEP]']:
                 continue
-            output_file.write(f"{token}\t{id2tag[int(pred.item())]}")
-    output_file.write('\n')
+            output_file.write(f"{token}\t{id2tag[pred]}")
+        output_file.write('\n')
 
 class SciDataset(torch.utils.data.Dataset):
     def __init__(self, encodings, labels=None, window_size = 512, stride=10, O_fraction=0.9):

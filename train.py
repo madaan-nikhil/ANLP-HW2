@@ -54,19 +54,19 @@ if __name__ == '__main__':
         
     print(f'Loading data')
     file_path = "dataloaders/project-2-at-2022-10-22-19-26-4e2271c2.conll" # set args.data_dir
-    train_dataset, val_dataset = get_loaders(file_path=file_path, 
+    train_loader, val_loader = get_loaders(file_path=file_path, 
                                             val_size=0.2, 
                                             tokenizer = AutoTokenizer.from_pretrained(args.model_name, padding="longest"))
     
-    train_loader = torch.utils.data.DataLoader(train_dataset, 
-                                           batch_size=args.batch_size, 
-                                           shuffle=False, 
-                                           collate_fn=SciDataset.collate_batch)
+    # train_loader = torch.utils.data.DataLoader(train_dataset, 
+    #                                        batch_size=args.batch_size, 
+    #                                        shuffle=False, 
+    #                                        collate_fn=SciDataset.collate_batch)
     
-    val_loader = torch.utils.data.DataLoader(val_dataset, 
-                                           batch_size=args.batch_size, 
-                                           shuffle=False, 
-                                           collate_fn=SciDataset.collate_batch)
+    # val_loader = torch.utils.data.DataLoader(val_dataset, 
+                                        #    batch_size=args.batch_size, 
+                                        #    shuffle=False, 
+                                        #    collate_fn=SciDataset.collate_batch)
     print(f'Data Loaded')
     
     model_name = args.model_name 
@@ -85,7 +85,19 @@ if __name__ == '__main__':
     
     optimizer = AdamW(model.parameters(), lr=args.lr)
     schedular = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=2, factor=0.5, min_lr=1e-8)
-    criterion = torch.nn.CrossEntropyLoss()
+    # criterion = torch.nn.CrossEntropyLoss()
+    criterion = torch.hub.load(
+      'adeelh/pytorch-multi-class-focal-loss',
+      model='focal_loss',
+      alpha=[0.01937514, 0.01800327, 0.11721275, 0.08885483, 0.07722896,
+       0.04040831, 0.03414669, 0.0928483 , 0.07651388, 0.07722896,
+       0.14889187, 0.09498275, 0.05923655, 0.00016076, 0.05490697],
+      gamma=2,
+      reduction='mean',
+      device='cuda',
+      dtype=torch.float32,
+      force_reload=True
+    )
 
     print("Model Training begins")
     if args.training:

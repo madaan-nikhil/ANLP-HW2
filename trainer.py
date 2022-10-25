@@ -279,7 +279,7 @@ class Trainer:
 
     def save_predictions(self, predictions, pred_path):
         with open(pred_path, 'wb') as f:
-
+            pickle.dump(predictions)
 
     def epochVerbose(self, epoch, train_loss, train_acc, dev_loss, dev_acc):
         log = "\nEpoch: {}/{} summary:".format(epoch, self.epochs)

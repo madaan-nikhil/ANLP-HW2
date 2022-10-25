@@ -114,6 +114,49 @@ def get_loaders(file_path, val_size=0.2, tokenizer=None, batch_size = 10):
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, collate_fn=val_dataset.collate_batch)
     return train_loader, val_loader
 
+def get_test_loader( tokenizer=DistilBertTokenizerFast.from_pretrained('distilbert-base-cased'),
+                     file_path='dataloaders/test_data.txt', 
+                     window_size=512):
+    test_file = open(file_path, 'r')
+    test_raw_data = " ".join(test_file.readlines())
+    test_texts = []
+    # split using docstart to get all papers
+    test_texts = re.split('-DOCSTART- ',test_raw_data)
+    # split using newlines to get all paragraphs
+    test_texts = [text.split('\n') for text in test_texts]
+    test_texts = [st.strip() for text in test_texts for st in text]
+
+    
+    test_token_data = [] # List[List[str]]
+    for line in test_texts:
+        if not len(line):
+            continue
+        test_token_data.append(line.split()) # List[str]
+
+    test_encodings = tokenizer(test_token_data, is_split_into_words=True, return_offsets_mapping=True, padding=False, truncation=False)
+    test_encodings.pop("offset_mapping")
+    test_loader = SciDataset(test_encodings,window_size=window_size, stride=window_size)
+
+    return test_loader
+
+def save_output(outputs, tokenizer, file_path):
+    '''
+    This is for 1 input (paper) at a time
+    outputs: Dict containing input_ids and preds
+    input_ids: Tensor[N,window_size]
+    preds: Tensor[N,window_size]
+    '''
+    input_ids = outputs['input_ids']
+    preds = outputs['preds']
+    output_file = open(file_path,'a+')
+    for window, window_pred in zip(input_ids, preds):
+        tokens = tokenizer.convert_ids_to_tokens(window)
+        for token, pred in zip(tokens, window_pred):
+            if token in ['[CLS],[PAD]','[SEP]']:
+                continue
+            output_file.write(f"{token}\t{id2tag[int(pred.item())]}")
+    output_file.write('\n')
+
 class SciDataset(torch.utils.data.Dataset):
     def __init__(self, encodings, labels, window_size = 512, stride=10, O_fraction=0.9):
         self.encodings = encodings

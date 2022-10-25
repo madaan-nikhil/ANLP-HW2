@@ -112,8 +112,7 @@ class Trainer:
 
         if self.inference:
             predictions = self.test_epoch(self.test_loader)
-            self.save_predictions(predictions, pred_path)
-            return
+            return predictions
 
         is_best = False
 

@@ -135,4 +135,6 @@ if __name__ == '__main__':
                         inference=True,
                         test_loader=test_loader)
         
-        trainer.fit(pred_path=args.predictions_dir)
+        predictions = trainer.fit(pred_path=args.predictions_dir)
+
+        save_output(predictions, tokenizer, args.model_dir + "/results.conll")

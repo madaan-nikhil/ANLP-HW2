@@ -218,16 +218,24 @@ class SciDataset(torch.utils.data.Dataset):
 
 
 if __name__ == "__main__":
-    file_path = "dataloaders/project-2-at-2022-10-22-19-26-4e2271c2.conll"
+    # file_path = "dataloaders/project-2-at-2022-10-22-19-26-4e2271c2.conll"
     tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-cased')
-    train_loader, val_loader = get_loaders(file_path=file_path, val_size=0.2, tokenizer=tokenizer)
-    example,labels = next(iter(train_loader))
-    print(f"labels: {labels[0][50:]}")
-    print(f"labels: {labels[1][50:]}")
-    for k,v in example.items():
-        print(v.shape)
-        if 'input_ids' == k:     
-            print(tokenizer.convert_ids_to_tokens(v[0])[:50])
-            print(tokenizer.convert_ids_to_tokens(v[1])[:50])
-        print(f"{k}: {v[0][:50]}")
-        print(f"{k}: {v[1][:50]}")
+    # train_loader, val_loader = get_loaders(file_path=file_path, val_size=0.2, tokenizer=tokenizer)
+    # example,labels = next(iter(train_loader))
+    # print(f"labels: {labels[0][50:]}")
+    # print(f"labels: {labels[1][50:]}")
+    # for k,v in example.items():
+    #     print(v.shape)
+    #     if 'input_ids' == k:     
+    #         print(tokenizer.convert_ids_to_tokens(v[0])[:50])
+    #         print(tokenizer.convert_ids_to_tokens(v[1])[:50])
+    #     print(f"{k}: {v[0][:50]}")
+    #     print(f"{k}: {v[1][:50]}")
+    
+    test_loader = get_test_loader()
+    for example in test_loader:
+        for k,v in example.items():
+            if 'input_ids' == k:     
+                print(tokenizer.convert_ids_to_tokens(v[0])[:50])
+            print(f"{k}: {v[0][:50]}")
+        break

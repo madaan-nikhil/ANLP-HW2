@@ -51,7 +51,22 @@ if __name__ == '__main__':
     args, _ = parser.parse_known_args()
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        
+    
+    if args.inference:
+        model = model.to(device)
+        trainer = Trainer(model,
+                        args.epochs,
+                        optimizer,
+                        schedular,
+                        criterion,
+                        train_loader,
+                        val_loader,
+                        device,
+                        args.model_dir,
+                        NUM_LABELS,
+                        resume = args.resume,
+                        inference=True)
+
     print(f'Loading data')
     file_path = "dataloaders/project-2-at-2022-10-22-19-26-4e2271c2.conll" # set args.data_dir
     train_loader, val_loader = get_loaders(file_path=file_path, 

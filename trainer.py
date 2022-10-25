@@ -2,6 +2,7 @@ import os
 import torch
 from tqdm import tqdm
 import pandas as pd
+import pickle
 
 class Tracker:
     def __init__(self, metrics, filename, load=False):
@@ -76,7 +77,9 @@ class Trainer:
         device,
         name,
         num_classes,
-        resume):
+        resume,
+        inference=False,
+        test_loader=None):
 
         self.model        = model
         self.epochs       = epochs
@@ -89,6 +92,8 @@ class Trainer:
         self.name         = name
         self.start_epoch  = 1
         self.num_classes  = num_classes
+        self.inference    = inference
+        self.test_loader  = test_loader
 
         # Mixed precision
         self.scaler = torch.cuda.amp.GradScaler()
@@ -100,10 +105,16 @@ class Trainer:
                                 'dev_acc'], name, load=resume)
 
 
-    def fit(self):
+    def fit(self, pred_path=None):
         '''
             Fit model to training set over #epochs
         '''
+
+        if self.inference:
+            predictions = self.test_epoch(self.test_loader)
+            self.save_predictions(predictions, pred_path)
+            return
+
         is_best = False
 
         for epoch in range(self.start_epoch, self.epochs+1):
@@ -220,6 +231,31 @@ class Trainer:
 
         return avg_loss_dev, acc_dev
 
+    def test_epoch(self, data_loader):
+
+        self.model.eval()
+        
+        predictions = []
+
+        # Do not store gradients 
+        with torch.no_grad():
+            # Get batches from DEV loader
+            for i_batch, (im_batch, id_batch) in enumerate(data_loader):
+                # Class predictions
+                im_batch = {k: torch.as_tensor(v).to(device=self.device) for k, v in im_batch.items()}
+                id_batch = id_batch.to(self.device)
+
+                logits = self.model(im_batch)
+
+                loss_batch = self.criterion(logits.reshape(-1, self.num_classes), id_batch.reshape(-1))
+
+                total_loss_dev += loss_batch
+                preds = torch.argmax(logits.reshape(-1, self.num_classes), axis=1)
+
+                predictions.append(preds)
+        
+        return predictions
+                
 
     def save_checkpoint(self, epoch, is_best):
         '''
@@ -240,6 +276,10 @@ class Trainer:
             best_path = os.path.join(self.name, "best_weights.pth")
             torch.save(self.model.state_dict(), best_path)
             print("Saving best model: {}".format(best_path))
+
+    def save_predictions(self, predictions, pred_path):
+        with open(pred_path, 'wb') as f:
+
 
     def epochVerbose(self, epoch, train_loss, train_acc, dev_loss, dev_acc):
         log = "\nEpoch: {}/{} summary:".format(epoch, self.epochs)

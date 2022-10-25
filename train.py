@@ -134,3 +134,5 @@ if __name__ == '__main__':
                         resume = args.resume,
                         inference=True,
                         test_loader=test_loader)
+        
+        trainer.fit(pred_path=args.predictions_dir)

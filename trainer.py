@@ -3,6 +3,7 @@ import torch
 from tqdm import tqdm
 import pandas as pd
 import pickle
+from collections import defaultdict
 
 class Tracker:
     def __init__(self, metrics, filename, load=False):
@@ -178,6 +179,7 @@ class Trainer:
             target            = id_batch.reshape(-1)
             mask              = (target != -100)
             num_correct      += int((target[mask] == preds[mask]).sum())
+
             avg_loss_epoch    = float(total_loss_epoch / (i_batch + 1))
             num_datapoints   += mask.sum().item()
             acc_epoch         = 100 * num_correct / num_datapoints
@@ -210,6 +212,9 @@ class Trainer:
 
         all_preds = []
 
+        class_correct = defaultdict(int)
+        class_points = defaultdict(int)
+
         # Do not store gradients 
         with torch.no_grad():
             # Get batches from DEV loader
@@ -227,7 +232,13 @@ class Trainer:
                 all_preds.append(preds.detach())
                 target = id_batch.reshape(-1)
                 mask = (target != -100)
-                num_correct += int((target[mask] == preds[mask]).sum())
+                masked_target = target[mask]
+                masked_preds = preds[mask]
+                for c in range(self.num_classes):
+                  class_targets_idx = (masked_target == c)
+                  class_correct[c] += int((masked_target[class_targets_idx] == masked_preds[class_targets_idx]).sum())
+                  class_points[c] += class_targets_idx.sum()
+                num_correct += int((masked_target == masked_preds).sum())
                 num_datapoints += mask.sum().item()
         all_preds = torch.cat(all_preds)
 
@@ -235,6 +246,9 @@ class Trainer:
 
         acc_dev      = 100 * num_correct / num_datapoints
         avg_loss_dev = float(total_loss_dev / (i_batch + 1))
+
+        for c in range(self.num_classes):
+          print(f"Class {c}: Acc {100*class_correct[c]/class_points[c] :.6f}%")
 
         return avg_loss_dev, acc_dev
 

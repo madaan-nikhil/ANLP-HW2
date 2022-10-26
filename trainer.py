@@ -243,8 +243,10 @@ class Trainer:
                 # Class predictions
                 im_batch = {k: torch.as_tensor(v).to(device=self.device) for k, v in im_batch.items()}
                 logits = self.model(im_batch)
-                preds = torch.argmax(logits.reshape(-1, self.num_classes), axis=1)
-                predictions.append({'input_ids': im_batch['input_ids'], 'preds':preds})
+                print(f'logits {logits.shape}')
+                preds = torch.argmax(logits, axis=-1)
+                print(f'preds {preds.shape}')
+                predictions.append({'input_ids': im_batch['input_ids'].squeeze(), 'preds':preds.squeeze()})
         
         return predictions
                 

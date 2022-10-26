@@ -4,6 +4,7 @@ from tqdm import tqdm
 import pandas as pd
 import pickle
 from collections import defaultdict
+from sklearn.metrics import f1_score
 
 class Tracker:
     def __init__(self, metrics, filename, load=False):
@@ -214,6 +215,8 @@ class Trainer:
 
         class_correct = defaultdict(int)
         class_points = defaultdict(int)
+        y_true = []
+        y_predicted = []
 
         # Do not store gradients 
         with torch.no_grad():
@@ -231,6 +234,10 @@ class Trainer:
                 preds = torch.argmax(logits.reshape(-1, self.num_classes), axis=1)
                 all_preds.append(preds.detach())
                 target = id_batch.reshape(-1)
+
+                y_true.extend(target.squeeze().to_list())
+                y_predicted.extend(preds.detach().squeeze().to_list())
+
                 mask = (target != -100)
                 masked_target = target[mask]
                 masked_preds = preds[mask]
@@ -249,6 +256,10 @@ class Trainer:
 
         for c in range(self.num_classes):
           print(f"Class {c}: Acc {100*class_correct[c]/class_points[c] :.6f}%")
+
+        f1_score = f1_score(y_true, y_predicted, average=None)
+        for c in range(self.num_classes):
+            print(f"Class {c}: F1 Score {f1_score[c] :.6f}%")
 
         return avg_loss_dev, acc_dev
 

@@ -2,7 +2,7 @@ from asyncore import file_dispatcher
 import encodings
 from pathlib import Path
 import re
-from transformers import DistilBertTokenizerFast
+from transformers import AutoTokenizer, DistilBertTokenizerFast
 from sklearn.model_selection import train_test_split
 import numpy as np
 import torch
@@ -117,6 +117,7 @@ def get_loaders(file_path, val_size=0.2, tokenizer=None, batch_size = 10):
 def get_test_loader( tokenizer=DistilBertTokenizerFast.from_pretrained('distilbert-base-cased'),
                      file_path='dataloaders/test_data.txt', 
                      window_size=512):
+    global test_word_ids
     test_file = open(file_path, 'r')
     test_raw_data = " ".join(test_file.readlines()).strip()
     test_texts = []
@@ -127,18 +128,37 @@ def get_test_loader( tokenizer=DistilBertTokenizerFast.from_pretrained('distilbe
     test_texts = [st.strip().split() for text in test_texts for st in text ]
     # test_texts = [[s for s in text if len(s)] for text in test_texts]
     test_token_data = [] # List[List[str]]
+    total_tokens = 0
     for line in test_texts:
         if not len(line):
             # print("error",line)
             continue
+        total_tokens += len(line)
         test_token_data.append(line) # List[str]
     # print(test_token_data[0])
     test_encodings = tokenizer(test_token_data, is_split_into_words=True, return_offsets_mapping=True, padding=False, truncation=False)
+    test_word_ids = [test_encodings.word_ids(i) for i in range(len(test_encodings['input_ids']))]
     test_encodings.pop("offset_mapping")
     test_dataset = SciDataset(test_encodings,window_size=window_size, stride=window_size)
     test_loader = DataLoader(test_dataset,batch_size=1,shuffle=False, collate_fn=test_dataset.collate_batch)
 
     return test_loader
+def convert_tokens_to_words(pred, batch):
+    '''
+    each input corresponds to one paragraph
+    '''
+
+    words_ids = test_word_ids[batch]
+    new_pred = []
+    prev_id = None
+    for i,word_id in enumerate(words_ids):
+        if word_id is None or word_id == prev_id:
+            continue
+
+        new_pred.append(pred[i])
+        prev_id = word_id
+
+    return new_pred
 
 def save_output(outputs, tokenizer, file_path):
     '''
@@ -148,17 +168,32 @@ def save_output(outputs, tokenizer, file_path):
     preds: Tensor[N,window_size]
     '''
     output_file = open(file_path,'a+')
-    for output in outputs:
-        input_ids = output['input_ids']
-        preds = output['preds'].cpu().numpy().astype(int)
-        
-        for input_idss, pred in zip(input_ids, preds):
-            tokens = tokenizer.convert_ids_to_tokens(input_idss)
-            for token, pp in zip(tokens, pred):
-                if token in ['[CLS],[PAD]','[SEP]']:
-                    continue
-                output_file.write(f"{token}\t{id2tag[pp]}")
+    for i,output in enumerate(outputs):
+        # each passage
+        input_ids = output['input_ids'].flatten()
+        preds = output['preds'].flatten()
+        input_mask = input_ids != 0 # things which are not [PAD]
+
+        input_ids = input_ids[input_mask]
+        preds = preds[input_mask]
+        words = tokenizer.decode(input_ids,skip_special_tokens=True)
+        preds = convert_tokens_to_words(input_ids, preds, i).cpu().numpy().astype(int)
+
+        # did'nt -> did 'nt
+        # did 'nt -> did '
+        words = words[4:-4].strip().split()
+        assert len(words) == len(preds), f"{len(words)} and {len(preds)}"
+        for word, pred in zip(words, preds):
+            output_file.write(f"{word}\t{id2tag[pred]}\n")
         output_file.write('\n')
+       
+        # for input_idss, pred in zip(input_ids, preds):
+        #     tokens = tokenizer.convert_ids_to_tokens(input_idss)
+        #     words, word_pred = convert_tokens_to_words(tokens, pred)
+        #     for token, pp in zip(tokens, pred):
+        #         if token in ['[CLS],[PAD]','[SEP]']:
+        #             continue
+        #         
 
 class SciDataset(torch.utils.data.Dataset):
     def __init__(self, encodings, labels=None, window_size = 512, stride=10, O_fraction=0.9):
@@ -171,8 +206,10 @@ class SciDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         item = {key: self.sliding_window_overlap(torch.tensor(val[idx]),pad_val=self.pads[key]) for key, val in self.encodings.items()}
+        
         if self.labels is None:
             return (item, None)
+        
         labels = self.sliding_window_overlap(torch.tensor(self.labels[idx]))
         O_nums = int(self.O_fraction)*labels.shape[1]
 
@@ -188,7 +225,7 @@ class SciDataset(torch.utils.data.Dataset):
         return (item, labels)
 
     def __len__(self):
-        return len(self.encodings)
+        return len(self.encodings['input_ids'])
 
     def sliding_window_overlap(self, x, pad_val=PAD_NUM):
         i = 0
@@ -228,7 +265,7 @@ class SciDataset(torch.utils.data.Dataset):
 
 if __name__ == "__main__":
     # file_path = "dataloaders/project-2-at-2022-10-22-19-26-4e2271c2.conll"
-    tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-cased')
+    tokenizer = AutoTokenizer.from_pretrained("allenai/scibert_scivocab_cased")
     # train_loader, val_loader = get_loaders(file_path=file_path, val_size=0.2, tokenizer=tokenizer)
     # example,labels = next(iter(train_loader))
     # print(f"labels: {labels[0][50:]}")
@@ -241,7 +278,7 @@ if __name__ == "__main__":
     #     print(f"{k}: {v[0][:50]}")
     #     print(f"{k}: {v[1][:50]}")
     
-    test_loader = get_test_loader()
+    test_loader = get_test_loader(tokenizer=tokenizer)
     for example in test_loader:
         for k,v in example.items():
             if 'input_ids' == k:     

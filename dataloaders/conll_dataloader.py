@@ -129,7 +129,7 @@ def get_test_loader( tokenizer=DistilBertTokenizerFast.from_pretrained('distilbe
     test_token_data = [] # List[List[str]]
     for line in test_texts:
         if not len(line):
-            print("error",line)
+            # print("error",line)
             continue
         test_token_data.append(line) # List[str]
     # print(test_token_data[0])
@@ -151,11 +151,13 @@ def save_output(outputs, tokenizer, file_path):
     for output in outputs:
         input_ids = output['input_ids']
         preds = output['preds'].cpu().numpy().astype(int)
-        tokens = tokenizer.convert_ids_to_tokens(input_ids)
-        for token, pred in zip(tokens, preds):
-            if token in ['[CLS],[PAD]','[SEP]']:
-                continue
-            output_file.write(f"{token}\t{id2tag[pred]}")
+        
+        for input_idss, pred in zip(input_ids, preds):
+            tokens = tokenizer.convert_ids_to_tokens(input_idss)
+            for token, pp in zip(tokens, pred):
+                if token in ['[CLS],[PAD]','[SEP]']:
+                    continue
+                output_file.write(f"{token}\t{id2tag[pp]}")
         output_file.write('\n')
 
 class SciDataset(torch.utils.data.Dataset):

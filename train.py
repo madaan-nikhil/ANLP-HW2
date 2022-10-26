@@ -9,6 +9,7 @@ from transformers import AutoModel, AutoTokenizer
 from trainer import *
 from model import *
 from dataloaders.conll_dataloader import *
+import pickle
 
 
 def _load_model(model_dir, filename, model, device):
@@ -36,7 +37,7 @@ if __name__ == '__main__':
     # hyperparameters sent by the client are passed as command-line arguments to the script.
     parser.add_argument('--epochs', type=int, default=50, help="num of epochs")
     parser.add_argument('--batch_size', type=int, default=1, help="batch size")
-    parser.add_argument('--lr', type=float, default=0.00001, help="learning rate")
+    parser.add_argument('--lr', type=float, default=0.0001, help="learning rate")
     parser.add_argument('--use-cuda', type=bool, default=False)# not used
     parser.add_argument('--resume', type=int, default=0, help="resume training")
     parser.add_argument('--resume_from_epoch', type=int, default=0, help="checkpoint to resume")
@@ -47,6 +48,7 @@ if __name__ == '__main__':
     parser.add_argument('--model_file', help="model_file")
     parser.add_argument('--model_name', type=str, default="allenai/scibert_scivocab_cased", help="resume training")
     parser.add_argument('--predictions_dir', help="predictions directory")
+    parser.add_argument('--loss_weights', help="weights for loss function")
 
 
     args, _ = parser.parse_known_args()
@@ -55,7 +57,7 @@ if __name__ == '__main__':
         
 
     print(f'Loading data')
-    file_path = "dataloaders/project-2-at-2022-10-22-19-26-4e2271c2.conll" # set args.data_dir
+    file_path = args.data_dir # set args.data_dir
     train_loader, val_loader = get_loaders(file_path=file_path, 
                                             val_size=0.2, 
                                             tokenizer = AutoTokenizer.from_pretrained(args.model_name, padding="longest"))
@@ -88,12 +90,12 @@ if __name__ == '__main__':
     optimizer = AdamW(model.parameters(), lr=args.lr)
     schedular = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=2, factor=0.5, min_lr=1e-8)
     # criterion = torch.nn.CrossEntropyLoss()
+    with open(args.loss_weights, 'rb') as f:
+      loss_weights = pickle.load(f)
     criterion = torch.hub.load(
       'adeelh/pytorch-multi-class-focal-loss',
       model='focal_loss',
-      alpha=[0.01937514, 0.01800327, 0.11721275, 0.08885483, 0.07722896,
-       0.04040831, 0.03414669, 0.0928483 , 0.07651388, 0.07722896,
-       0.14889187, 0.09498275, 0.05923655, 0.00016076, 0.05490697],
+      alpha=loss_weights,
       gamma=2,
       reduction='mean',
       device='cuda',

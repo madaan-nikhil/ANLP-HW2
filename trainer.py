@@ -176,9 +176,10 @@ class Trainer:
             total_loss_epoch += loss_batch
             preds             = torch.argmax(logits.reshape(-1, self.num_classes), axis=1)
             target            = id_batch.reshape(-1)
-            num_correct      += int((target == preds).sum())
+            mask              = (target != -100)
+            num_correct      += int((target[mask] == preds[mask]).sum())
             avg_loss_epoch    = float(total_loss_epoch / (i_batch + 1))
-            num_datapoints   += target.shape[0]
+            num_datapoints   += mask.sum().item()
             acc_epoch         = 100 * num_correct / num_datapoints
             
             self.scheduler.step(avg_loss_epoch)
@@ -207,6 +208,8 @@ class Trainer:
         num_correct    = 0
         num_datapoints = 0
 
+        all_preds = []
+
         # Do not store gradients 
         with torch.no_grad():
             # Get batches from DEV loader
@@ -221,9 +224,14 @@ class Trainer:
 
                 total_loss_dev += loss_batch
                 preds = torch.argmax(logits.reshape(-1, self.num_classes), axis=1)
+                all_preds.append(preds.detach())
                 target = id_batch.reshape(-1)
-                num_correct += int((target == preds).sum())
-                num_datapoints += target.shape[0]
+                mask = (target != -100)
+                num_correct += int((target[mask] == preds[mask]).sum())
+                num_datapoints += mask.sum().item()
+        all_preds = torch.cat(all_preds)
+
+        print(torch.unique(all_preds, return_counts = True))
 
         acc_dev      = 100 * num_correct / num_datapoints
         avg_loss_dev = float(total_loss_dev / (i_batch + 1))

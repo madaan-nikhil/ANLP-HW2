@@ -221,10 +221,10 @@ class SciDataset(torch.utils.data.Dataset):
        
         if not mask.sum(): # if none selected, select atleast 2 
             mask = np.random.choice(len(labels),2)
-        print(f"before: {len(labels)}")
+        # print(f"before: {len(labels)}")
         item = {key : val[mask] for key, val in item.items()}
         labels = labels[mask]
-        print(f"after: {len(labels)}")
+        # print(f"after: {len(labels)}")
         return (item, labels)
 
     def __len__(self):

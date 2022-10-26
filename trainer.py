@@ -235,8 +235,8 @@ class Trainer:
                 all_preds.append(preds.detach())
                 target = id_batch.reshape(-1)
 
-                y_true.extend(target.squeeze().to_list())
-                y_predicted.extend(preds.detach().squeeze().to_list())
+                y_true.extend(target.squeeze().squeeze().cpu().numpy().tolist())
+                y_predicted.extend(preds.detach().squeeze().cpu().numpy().tolist())
 
                 mask = (target != -100)
                 masked_target = target[mask]
@@ -257,9 +257,9 @@ class Trainer:
         for c in range(self.num_classes):
           print(f"Class {c}: Acc {100*class_correct[c]/class_points[c] :.6f}%")
 
-        f1_score = f1_score(y_true, y_predicted, average=None)
+        F1_score = f1_score(y_true, y_predicted, average=None)
         for c in range(self.num_classes):
-            print(f"Class {c}: F1 Score {f1_score[c] :.6f}%")
+            print(f"Class {c}: F1 Score {F1_score[c] :.6f}")
 
         return avg_loss_dev, acc_dev
 

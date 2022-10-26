@@ -117,7 +117,7 @@ def get_loaders(file_path, val_size=0.2, tokenizer=None, batch_size = 10):
 def get_test_loader( tokenizer=DistilBertTokenizerFast.from_pretrained('distilbert-base-cased'),
                      file_path='dataloaders/test_data.txt', 
                      window_size=512):
-    global test_word_ids
+    global test_token_data, test_word_ids
     test_file = open(file_path, 'r')
     test_raw_data = " ".join(test_file.readlines()).strip()
     test_texts = []
@@ -151,12 +151,15 @@ def convert_tokens_to_words(pred, batch):
     words_ids = test_word_ids[batch]
     new_pred = []
     prev_id = None
+
     for i,word_id in enumerate(words_ids):
+
         if word_id is None or word_id == prev_id:
             continue
+        else:
+            new_pred.append(pred[i])
+            prev_id = word_id
 
-        new_pred.append(pred[i])
-        prev_id = word_id
 
     return new_pred
 
@@ -176,12 +179,12 @@ def save_output(outputs, tokenizer, file_path):
 
         input_ids = input_ids[input_mask]
         preds = preds[input_mask]
-        words = tokenizer.decode(input_ids,skip_special_tokens=True)
-        preds = convert_tokens_to_words(input_ids, preds, i).cpu().numpy().astype(int)
+        tokens = tokenizer.batch_decode(input_ids)
+        preds = convert_tokens_to_words(tokens, preds, i).cpu().numpy().astype(int)
 
         # did'nt -> did 'nt
         # did 'nt -> did '
-        words = words[4:-4].strip().split()
+        words = test_token_data[i]
         assert len(words) == len(preds), f"{len(words)} and {len(preds)}"
         for word, pred in zip(words, preds):
             output_file.write(f"{word}\t{id2tag[pred]}\n")

@@ -207,7 +207,7 @@ class Trainer:
         total_loss_dev = 0
         num_correct    = 0
         num_datapoints = 0
-
+        all_preds = []
         # Do not store gradients 
         with torch.no_grad():
             # Get batches from DEV loader
@@ -222,9 +222,12 @@ class Trainer:
 
                 total_loss_dev += loss_batch
                 preds = torch.argmax(logits.reshape(-1, self.num_classes), axis=1)
+                all_preds.append(preds)
                 target = id_batch.reshape(-1)
                 num_correct += int((target == preds).sum())
                 num_datapoints += target.shape[0]
+        all_preds = torch.cat(all_preds)
+        print(torch.unique(all_preds, return_counts = True))
 
         acc_dev      = 100 * num_correct / num_datapoints
         avg_loss_dev = float(total_loss_dev / (i_batch + 1))

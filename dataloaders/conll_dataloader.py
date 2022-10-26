@@ -172,17 +172,6 @@ class SciDataset(torch.utils.data.Dataset):
         if self.labels is None:
             return item
         labels = self.sliding_window_overlap(torch.tensor(self.labels[idx]))
-        O_nums = int(self.O_fraction)*labels.shape[1]
-
-        labels_O_nums = (labels==tag2id['O']).sum(dim=1)
-        mask = labels_O_nums <= O_nums
-       
-        if not mask.sum(): # if none selected, select atleast 2 
-            mask = np.random.choice(len(labels),2)
-        print(f"before: {len(labels)}")
-        item = {key : val[mask] for key, val in item.items()}
-        labels = labels[mask]
-        print(f"after: {len(labels)}")
         return (item, labels)
 
     def __len__(self):

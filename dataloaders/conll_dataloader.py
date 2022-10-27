@@ -180,7 +180,7 @@ def save_output(outputs, tokenizer, file_path):
         input_ids = input_ids[input_mask]
         preds = preds[input_mask]
         tokens = tokenizer.batch_decode(input_ids)
-        preds = convert_tokens_to_words(tokens, preds, i).cpu().numpy().astype(int)
+        preds = convert_tokens_to_words(preds.cpu().numpy().astype(int), i)
 
         # did'nt -> did 'nt
         # did 'nt -> did '

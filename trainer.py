@@ -235,12 +235,12 @@ class Trainer:
                 all_preds.append(preds.detach())
                 target = id_batch.reshape(-1)
 
-                y_true.extend(target.squeeze().squeeze().cpu().numpy().tolist())
-                y_predicted.extend(preds.detach().squeeze().cpu().numpy().tolist())
-
                 mask = (target != -100)
                 masked_target = target[mask]
                 masked_preds = preds[mask]
+
+                y_true.extend(masked_target.squeeze().squeeze().cpu().numpy().tolist())
+                y_predicted.extend(masked_preds.detach().squeeze().cpu().numpy().tolist())
                 for c in range(self.num_classes):
                   class_targets_idx = (masked_target == c)
                   class_correct[c] += int((masked_target[class_targets_idx] == masked_preds[class_targets_idx]).sum())
@@ -276,9 +276,9 @@ class Trainer:
                 # Class predictions
                 im_batch = {k: torch.as_tensor(v).to(device=self.device) for k, v in im_batch.items()}
                 logits = self.model(im_batch)
-                print(f'logits {logits.shape}')
+                # print(f'logits {logits.shape}')
                 preds = torch.argmax(logits, axis=-1)
-                print(f'preds {preds.shape}')
+                # print(f'preds {preds.shape}')
                 predictions.append({'input_ids': im_batch['input_ids'].squeeze(), 'preds':preds.squeeze()})
         
         return predictions

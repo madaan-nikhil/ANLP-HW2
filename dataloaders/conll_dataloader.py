@@ -29,11 +29,11 @@ def tokenize_and_align_labels(tags, encodings, tag2id):
                 if word_idx is None:
                     label_ids.append(PAD_NUM)
                 # We set the label for the first token of each word.
-                elif word_idx != previous_word_idx and tag2id[label[word_idx]] != tag2id['O']:
+                elif word_idx != previous_word_idx and tag2id[label[word_idx]] != 13:
                     label_ids.append(tag2id[label[word_idx]])
                 # For the other tokens in a word, we set the label to either the current label or PAD_NUM, depending on
                 # the label_all_tokens flag.
-                elif tag2id[label[word_idx]] == tag2id['O']:
+                elif tag2id[label[word_idx]] == 13:
                     label_ids.append(tag2id[label[word_idx]])
 
                 else:
@@ -73,7 +73,7 @@ def read_conll(file_path):
         for line in doc.split('\n'): # splits each line
             if '-DOCSTART-' in line:
                 continue
-            token, tag = line.split(" -X- _ ") #splits text and tag
+            token, tag = line.split("\t") #splits text and tag
             tokens.append(token)
             tags.append(tag)
         token_docs.append(tokens)
@@ -84,7 +84,13 @@ def read_conll(file_path):
 
 def get_loaders(file_path, val_size=0.2, tokenizer=None, batch_size = 10):
     global tag2id, id2tag
-    texts, tags = read_conll(file_path)
+    raw_texts, raw_tags = read_conll(file_path)
+    texts, tags = [], []
+    for i in range(len(tags)):
+        if len(np.unique(tags[i])) != 1:
+            texts.append(raw_texts[i])
+            tags.append(raw_tags[i])
+            
     unique_tags = set(tag for doc in tags for tag in doc)
     tag2id = {}
     with open('dataloaders/tag2id.txt','r') as fp:
@@ -97,9 +103,9 @@ def get_loaders(file_path, val_size=0.2, tokenizer=None, batch_size = 10):
     # tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-cased')
 
     train_texts, val_texts, train_tags, val_tags = train_test_split(texts, tags, test_size=val_size, random_state=0)
-
-    train_encodings = tokenizer(train_texts, is_split_into_words=True, return_offsets_mapping=True, padding=False, truncation=False)
-    val_encodings = tokenizer(val_texts, is_split_into_words=True, return_offsets_mapping=True, padding=False, truncation=False)
+    
+    train_encodings = tokenizer(train_texts, is_split_into_words=True, return_offsets_mapping=True, padding=True,max_length=512, truncation=False)
+    val_encodings = tokenizer(val_texts, is_split_into_words=True, return_offsets_mapping=True, padding=True,max_length=512, truncation=False)
 
     train_labels = tokenize_and_align_labels(train_tags, train_encodings, tag2id)
     val_labels = tokenize_and_align_labels(val_tags, val_encodings, tag2id)
@@ -108,10 +114,10 @@ def get_loaders(file_path, val_size=0.2, tokenizer=None, batch_size = 10):
     val_encodings.pop("offset_mapping")
     # print(train_texts[0][:50])
     train_dataset = SciDataset(train_encodings, train_labels,stride=1024)
-    val_dataset = SciDataset(val_encodings, val_labels,stride=512, sample=False)
+    val_dataset = SciDataset(val_encodings, val_labels,stride=1024)
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=train_dataset.collate_batch)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=val_dataset.collate_batch)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, collate_fn=val_dataset.collate_batch)
     return train_loader, val_loader
 
 def get_test_loader( tokenizer=DistilBertTokenizerFast.from_pretrained('distilbert-base-cased'),
@@ -143,6 +149,7 @@ def get_test_loader( tokenizer=DistilBertTokenizerFast.from_pretrained('distilbe
     test_loader = DataLoader(test_dataset,batch_size=1,shuffle=False, collate_fn=test_dataset.collate_batch)
 
     return test_loader
+
 def convert_tokens_to_words(pred, batch):
     '''
     each input corresponds to one paragraph
@@ -180,14 +187,14 @@ def save_output(outputs, tokenizer, file_path):
         input_ids = input_ids[input_mask]
         preds = preds[input_mask]
         tokens = tokenizer.batch_decode(input_ids)
-        preds = convert_tokens_to_words(preds.cpu().numpy().astype(int), i)
+        preds = convert_tokens_to_words(preds, i).cpu().numpy().astype(int)
 
         # did'nt -> did 'nt
         # did 'nt -> did '
         words = test_token_data[i]
         assert len(words) == len(preds), f"{len(words)} and {len(preds)}"
         for word, pred in zip(words, preds):
-            output_file.write(f"{word}\t{id2tag[pred]}\n")
+            output_file.write(f"{word}\t{id2tag[int(pred)]}\n")
         output_file.write('\n')
        
         # for input_idss, pred in zip(input_ids, preds):
@@ -199,36 +206,32 @@ def save_output(outputs, tokenizer, file_path):
         #         
 
 class SciDataset(torch.utils.data.Dataset):
-    def __init__(self, encodings, labels=None, window_size = 512, stride=10, O_fraction=0.9, sample=True):
+    def __init__(self, encodings, labels=None, window_size = 512, stride=10, O_fraction=0.9):
         self.encodings = encodings
         self.labels = labels
         self.window_size = window_size
         self.stride = stride
         self.pads ={'input_ids':0, 'attention_mask':0, 'token_type_ids': 0}
         self.O_fraction = O_fraction
-        self.sample = sample
 
     def __getitem__(self, idx):
-        item = {key: self.sliding_window_overlap(torch.tensor(val[idx]),pad_val=self.pads[key]) for key, val in self.encodings.items()}
-        
+        # item = {key: self.sliding_window_overlap(torch.tensor(val[idx]),pad_val=self.pads[key]) for key, val in self.encodings.items()}
+        item = self.encodings[idx]
         if self.labels is None:
             return (item, None)
         
-        labels = self.sliding_window_overlap(torch.tensor(self.labels[idx]))
+        # labels = self.sliding_window_overlap(torch.tensor(self.labels[idx]))
+        labels = self.labels[idx]
+        # O_nums = int(self.O_fraction)*labels.shape[1]
 
-        if not self.sample:
-            return (item, labels)
-
-        O_nums = int(self.O_fraction)*labels.shape[1]
-
-        labels_O_nums = (labels==tag2id['O']).sum(dim=1)
-        mask = labels_O_nums <= O_nums
+        # labels_O_nums = (labels==tag2id['O']).sum(dim=1)
+        # mask = labels_O_nums <= O_nums
        
-        if not mask.sum(): # if none selected, select atleast 2 
-            mask = np.random.choice(len(labels),2)
+        # if not mask.sum(): # if none selected, select atleast 2 
+        #     mask = np.random.choice(len(labels),2)
         # print(f"before: {len(labels)}")
-        item = {key : val[mask] for key, val in item.items()}
-        labels = labels[mask]
+        # item = {key : val[mask] for key, val in item.items()}
+        # labels = labels[mask]
         # print(f"after: {len(labels)}")
         return (item, labels)
 
@@ -268,6 +271,7 @@ class SciDataset(torch.utils.data.Dataset):
             return inputs
 
         Y = torch.cat([d[1] for d in batch],0)
+        
         return inputs, Y
 
 

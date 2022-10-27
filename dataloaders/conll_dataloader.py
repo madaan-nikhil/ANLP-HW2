@@ -29,11 +29,11 @@ def tokenize_and_align_labels(tags, encodings, tag2id):
                 if word_idx is None:
                     label_ids.append(PAD_NUM)
                 # We set the label for the first token of each word.
-                elif word_idx != previous_word_idx and tag2id[label[word_idx]] != 13:
+                elif word_idx != previous_word_idx and tag2id[label[word_idx]] != tag2id['O']:
                     label_ids.append(tag2id[label[word_idx]])
                 # For the other tokens in a word, we set the label to either the current label or PAD_NUM, depending on
                 # the label_all_tokens flag.
-                elif tag2id[label[word_idx]] == 13:
+                elif tag2id[label[word_idx]] == tag2id['O']:
                     label_ids.append(tag2id[label[word_idx]])
 
                 else:
@@ -108,10 +108,10 @@ def get_loaders(file_path, val_size=0.2, tokenizer=None, batch_size = 10):
     val_encodings.pop("offset_mapping")
     # print(train_texts[0][:50])
     train_dataset = SciDataset(train_encodings, train_labels,stride=1024)
-    val_dataset = SciDataset(val_encodings, val_labels,stride=512)
+    val_dataset = SciDataset(val_encodings, val_labels,stride=512, sample=False)
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=train_dataset.collate_batch)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, collate_fn=val_dataset.collate_batch)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=val_dataset.collate_batch)
     return train_loader, val_loader
 
 def get_test_loader( tokenizer=DistilBertTokenizerFast.from_pretrained('distilbert-base-cased'),
@@ -199,13 +199,14 @@ def save_output(outputs, tokenizer, file_path):
         #         
 
 class SciDataset(torch.utils.data.Dataset):
-    def __init__(self, encodings, labels=None, window_size = 512, stride=10, O_fraction=0.9):
+    def __init__(self, encodings, labels=None, window_size = 512, stride=10, O_fraction=0.9, sample=True):
         self.encodings = encodings
         self.labels = labels
         self.window_size = window_size
         self.stride = stride
         self.pads ={'input_ids':0, 'attention_mask':0, 'token_type_ids': 0}
         self.O_fraction = O_fraction
+        self.sample = sample
 
     def __getitem__(self, idx):
         item = {key: self.sliding_window_overlap(torch.tensor(val[idx]),pad_val=self.pads[key]) for key, val in self.encodings.items()}
@@ -214,6 +215,10 @@ class SciDataset(torch.utils.data.Dataset):
             return (item, None)
         
         labels = self.sliding_window_overlap(torch.tensor(self.labels[idx]))
+
+        if not self.sample:
+            return (item, labels)
+
         O_nums = int(self.O_fraction)*labels.shape[1]
 
         labels_O_nums = (labels==tag2id['O']).sum(dim=1)

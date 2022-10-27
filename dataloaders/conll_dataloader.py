@@ -108,7 +108,7 @@ def get_loaders(file_path, val_size=0.2, tokenizer=None, batch_size = 10):
     val_encodings.pop("offset_mapping")
     # print(train_texts[0][:50])
     train_dataset = SciDataset(train_encodings, train_labels,stride=1024)
-    val_dataset = SciDataset(val_encodings, val_labels,stride=1024)
+    val_dataset = SciDataset(val_encodings, val_labels,stride=512)
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=train_dataset.collate_batch)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, collate_fn=val_dataset.collate_batch)

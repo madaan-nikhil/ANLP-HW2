@@ -86,11 +86,11 @@ def get_loaders(file_path, val_size=0.2, tokenizer=None, batch_size = 10):
     global tag2id, id2tag
     raw_texts, raw_tags = read_conll(file_path)
     texts, tags = [], []
-    for i in range(len(tags)):
-        if len(np.unique(tags[i])) != 1:
+    for i in range(len(raw_tags)):
+        if len(np.unique(raw_tags[i])) != 1:
             texts.append(raw_texts[i])
             tags.append(raw_tags[i])
-            
+
     unique_tags = set(tag for doc in tags for tag in doc)
     tag2id = {}
     with open('dataloaders/tag2id.txt','r') as fp:
@@ -103,9 +103,9 @@ def get_loaders(file_path, val_size=0.2, tokenizer=None, batch_size = 10):
     # tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-cased')
 
     train_texts, val_texts, train_tags, val_tags = train_test_split(texts, tags, test_size=val_size, random_state=0)
-    
-    train_encodings = tokenizer(train_texts, is_split_into_words=True, return_offsets_mapping=True, padding=True,max_length=512, truncation=False)
-    val_encodings = tokenizer(val_texts, is_split_into_words=True, return_offsets_mapping=True, padding=True,max_length=512, truncation=False)
+
+    train_encodings = tokenizer(train_texts, is_split_into_words=True, return_offsets_mapping=True, padding='max_length',max_length=512, truncation=False)
+    val_encodings = tokenizer(val_texts, is_split_into_words=True, return_offsets_mapping=True, padding='max_length',max_length=512, truncation=False)
 
     train_labels = tokenize_and_align_labels(train_tags, train_encodings, tag2id)
     val_labels = tokenize_and_align_labels(val_tags, val_encodings, tag2id)
@@ -113,6 +113,7 @@ def get_loaders(file_path, val_size=0.2, tokenizer=None, batch_size = 10):
     train_encodings.pop("offset_mapping") # we don't want to pass this to the model
     val_encodings.pop("offset_mapping")
     # print(train_texts[0][:50])
+
     train_dataset = SciDataset(train_encodings, train_labels,stride=1024)
     val_dataset = SciDataset(val_encodings, val_labels,stride=1024)
 
@@ -215,13 +216,15 @@ class SciDataset(torch.utils.data.Dataset):
         self.O_fraction = O_fraction
 
     def __getitem__(self, idx):
-        # item = {key: self.sliding_window_overlap(torch.tensor(val[idx]),pad_val=self.pads[key]) for key, val in self.encodings.items()}
-        item = self.encodings[idx]
+        item = {key: torch.tensor(val[idx]) for key, val in self.encodings.items()}
+        # print(self.encodings)
+        # blah
+        # item = self.encodings[idx]
         if self.labels is None:
             return (item, None)
         
         # labels = self.sliding_window_overlap(torch.tensor(self.labels[idx]))
-        labels = self.labels[idx]
+        labels = torch.tensor(self.labels[idx])
         # O_nums = int(self.O_fraction)*labels.shape[1]
 
         # labels_O_nums = (labels==tag2id['O']).sum(dim=1)
@@ -258,6 +261,7 @@ class SciDataset(torch.utils.data.Dataset):
         
 
         X = [d[0] for d in batch]
+        
 
         keys = list(X[0].keys())
         inputs = defaultdict(list)
@@ -265,21 +269,24 @@ class SciDataset(torch.utils.data.Dataset):
             for x in X:
                 # print(x[key].shape)
                 inputs[key].append(x[key])
-            inputs[key] = torch.cat(inputs[key],0)
+            inputs[key] = torch.stack(inputs[key],0)
         if batch[0][1] is None :
             # print(inputs)
             return inputs
+        
+        Y = torch.stack([torch.tensor(d[1]) for d in batch],0)
 
-        Y = torch.cat([d[1] for d in batch],0)
+        
         
         return inputs, Y
 
 
 if __name__ == "__main__":
-    # file_path = "dataloaders/project-2-at-2022-10-22-19-26-4e2271c2.conll"
+    file_path = "dataloaders/new_train.conll"
     tokenizer = AutoTokenizer.from_pretrained("allenai/scibert_scivocab_cased")
-    # train_loader, val_loader = get_loaders(file_path=file_path, val_size=0.2, tokenizer=tokenizer)
-    # example,labels = next(iter(train_loader))
+    train_loader, val_loader = get_loaders(file_path=file_path, val_size=0.2, tokenizer=tokenizer)
+    example,labels = next(iter(train_loader))
+    print(example['input_ids'].shape, labels.shape)
     # print(f"labels: {labels[0][50:]}")
     # print(f"labels: {labels[1][50:]}")
     # for k,v in example.items():
@@ -290,10 +297,10 @@ if __name__ == "__main__":
     #     print(f"{k}: {v[0][:50]}")
     #     print(f"{k}: {v[1][:50]}")
     
-    test_loader = get_test_loader(tokenizer=tokenizer)
-    for example in test_loader:
-        for k,v in example.items():
-            if 'input_ids' == k:     
-                print(tokenizer.convert_ids_to_tokens(v[0])[:50])
-            print(f"{k}: {v[0][:50]}")
-        break
+    # test_loader = get_test_loader(tokenizer=tokenizer)
+    # for example in test_loader:
+    #     for k,v in example.items():
+    #         if 'input_ids' == k:     
+    #             print(tokenizer.convert_ids_to_tokens(v[0])[:50])
+    #         print(f"{k}: {v[0][:50]}")
+    #     break

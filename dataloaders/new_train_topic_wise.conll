@@ -75613,7 +75613,7 @@ as	O
 the	O
 evaluation	O
 metric	O
-.	B-Doc-Begin
+.	O
 
 We	O
 build	O
@@ -75766,7 +75766,7 @@ is	O
 K	I-HyperparameterValue
 training	B-HyperparameterName
 steps	I-HyperparameterName
-.	B-Doc-Begin
+.	O
 
 The	O
 JRC	O
@@ -76805,7 +76805,7 @@ encoder	O
 ,	O
 we	O
 adopt	O
-four	B-Doc-Begin
+four	O
 We	O
 set	O
 the	O
@@ -76965,8 +76965,8 @@ GPU	O
 for	O
 all	O
 the	O
-experiments	B-Doc-Begin
-.	I-Doc-Begin
+experiments	O
+.	O
 
 We	O
 compare	O
@@ -77375,7 +77375,7 @@ in	O
 a	O
 shopping	O
 session	O
-.	B-Doc-Begin
+.	O
 
 For	O
 this	O
@@ -77436,7 +77436,7 @@ in	O
 the	O
 embedding	O
 space	O
-.	B-Doc-Begin
+.	O
 
 Learning	O
 lexical	O
@@ -77554,7 +77554,7 @@ ZT	O
 )	O
 .	O
 
-7	B-Doc-Begin
+7	O
 We	O
 run	O
 every	O
@@ -77595,7 +77595,7 @@ with	O
 patience	B-HyperparameterName
 =	O
 10.Results	B-HyperparameterValue
-.	B-Doc-Begin
+.	O
 
 MDM	O
 typically	O
@@ -78653,7 +78653,7 @@ as	O
 the	O
 lower	O
 bound	O
-.	B-Doc-Begin
+.	O
 
 To	O
 illustrate	O
@@ -78950,8 +78950,8 @@ at	O
 (	O
 second	O
 row	O
-)	B-Doc-Begin
-.	I-Doc-Begin
+)	O
+.	O
 
 If	O
 not	O
@@ -80046,7 +80046,7 @@ more	O
 challenging	O
 adversarial	O
 settings	O
-.	B-Doc-Begin
+.	O
 
 Question	O
 Diversity	O
@@ -80148,7 +80148,7 @@ beam	B-HyperparameterName
 size	I-HyperparameterName
 of	O
 5	B-HyperparameterValue
-.	B-Doc-Begin
+.	O
 
 To	O
 mitigate	O
@@ -80554,7 +80554,7 @@ methods	O
 in	O
 Table	O
 11	O
-.	B-Doc-Begin
+.	O
 
 In	O
 order	O
@@ -80689,7 +80689,7 @@ p	I-HyperparameterName
 =	O
 0.75	B-HyperparameterValue
 )	O
-.	B-Doc-Begin
+.	O
 
 Our	O
 findings	O
@@ -81317,7 +81317,7 @@ history	O
 
 2017	O
 )	O
-.	B-Doc-Begin
+.	O
 
 For	O
 both	O
@@ -81391,7 +81391,7 @@ of	O
 factually	O
 consistent	O
 responses	O
-.	B-Doc-Begin
+.	O
 
 Table	O
 2	O
@@ -83189,8 +83189,8 @@ open	O
 source	O
 all	O
 our	O
-code	B-Doc-Begin
-.	I-Doc-Begin
+code	O
+.	O
 
 A	O
 Supplemental	O
@@ -83254,7 +83254,7 @@ number	O
 of	O
 parameters	O
 ,	O
-110M.	B-Doc-Begin
+110M.	O
 In	O
 this	O
 part	O
@@ -84138,7 +84138,7 @@ statistics	O
 of	O
 the	O
 experimental	O
-datasets.3	B-Doc-Begin
+datasets.3	O
 https://vlsp.org.vn/vlsp2013/eval	O
 PhoNLP	B-MethodName
 is	O
@@ -84401,7 +84401,7 @@ test	O
 sets	O
 .	O
 
-Table	B-Doc-Begin
+Table	O
 2	O
 presents	O
 results	O
@@ -85991,7 +85991,7 @@ the	O
 OntoNotes	O
 Release	O
 5.0	O
-dataset	B-Doc-Begin
+dataset	O
 (	O
 Weischedel	O
 et	O
@@ -86190,7 +86190,7 @@ missing	O
 the	O
 key	O
 name	O
-.	B-Doc-Begin
+.	O
 
 However	O
 ,	O
@@ -86226,7 +86226,7 @@ clean	O
 masks	O
 this	O
 way	O
-.	B-Doc-Begin
+.	O
 
 Microwaves	O
 melted	O
@@ -86276,7 +86276,7 @@ of	O
 after	O
 100	B-MetricValue
 epochs	B-MetricName
-.	B-Doc-Begin
+.	O
 
 Table	O
 A1	O
@@ -86811,7 +86811,7 @@ to	O
 calculate	O
 model	O
 output	O
-.	B-Doc-Begin
+.	O
 
 The	O
 experiments	O
@@ -87035,7 +87035,7 @@ on	O
 performance	O
 in	O
 Sec.6	O
-.	B-Doc-Begin
+.	O
 
 In	O
 Sec	O
@@ -87588,7 +87588,7 @@ Association	O
 for	O
 Computational	O
 Linguistics	O
-.	B-Doc-Begin
+.	O
 
 After	O
 that	O
@@ -87834,7 +87834,7 @@ and	O
 163840	B-MetricValue
 .	O
 
-For	B-Doc-Begin
+For	O
 Phase	O
 3	O
 ,	O
@@ -88733,7 +88733,7 @@ obj	O
 cofounded	O
 the	O
 <	O
-sub>.For	B-Doc-Begin
+sub>.For	O
 the	O
 experiments	O
 of	O

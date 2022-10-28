@@ -67,13 +67,18 @@ def read_conll(file_path):
     token_docs = []
     tag_docs = []
     print(f"Parsing {len(raw_docs)} docs")
+    # print(raw_docs)
     for doc in raw_docs:
         tokens = []
         tags = []
-        for line in doc.split('\n'): # splits each line
+        for i,line in enumerate(doc.split('\n')): # splits each line
+            # print(line)
             if '-DOCSTART-' in line:
                 continue
-            token, tag = line.split("\t") #splits text and tag
+            try:
+                token, tag = line.split("\t") #splits text and tag
+            except:
+                print(line,i)
             tokens.append(token)
             tags.append(tag)
         token_docs.append(tokens)

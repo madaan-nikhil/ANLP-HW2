@@ -8,8 +8,7 @@ class TokenClassification(nn.Module):
                 device,
                 num_labels,
                 hidden_size,
-                dropout,
-                alternate_objective=False):
+                dropout):
         super(TokenClassification, self).__init__()
         self.feature_extractor = feature_extractor
         self.dropout = nn.Dropout(dropout)

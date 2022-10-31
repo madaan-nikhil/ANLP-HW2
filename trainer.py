@@ -158,11 +158,13 @@ class Trainer:
         # Cumulative loss over all batches or Avg Loss * num_batches
         total_loss_epoch = 0
         num_datapoints = 0
+        mapping = {-100:-100, 0:0, 1:0, 2:1, 3:2, 4:3, 5:4, 6:4, 7:5, 8:6, 9:3, 10:2, 11:1, 12:5, 13:7, 14:6}
 
         # Iterate one batch at a time
         for i_batch, (im_batch, id_batch) in enumerate(self.train_loader):
             im_batch = {k: torch.as_tensor(v).to(device=self.device) for k, v in im_batch.items()}
             id_batch = id_batch.to(self.device)
+            # print(f'id_batch {id_batch.shape}')
 
             if torch.where(id_batch!=-100)[0].shape[0] == 0:
               continue
@@ -170,7 +172,8 @@ class Trainer:
             if alternate_objective:
               orig_shape = id_batch.shape
               labels = id_batch.flatten()
-              
+              id_batch = torch.as_tensor([mapping[label.item()] for label in labels]).unsqueeze(0).to(self.device).reshape(orig_shape)
+
 
             # Get predictions (forward pass)
             self.optimizer.zero_grad()
@@ -178,7 +181,11 @@ class Trainer:
             # Mixed precision
             with torch.cuda.amp.autocast():  
                 logits = self.model(im_batch, alternate_objective)
-                loss_batch = self.criterion(logits.reshape(-1, self.num_classes), id_batch.reshape(-1))      
+                # print(f'alternate_objective {alternate_objective} logits {logits.shape}')
+                if alternate_objective:
+                  loss_batch = self.criterion(logits.reshape(-1, self.num_classes//2 + 1), id_batch.reshape(-1))
+                else:
+                  loss_batch = self.criterion(logits.reshape(-1, self.num_classes), id_batch.reshape(-1))            
             
             self.scaler.scale(loss_batch).backward()
             self.scaler.step(self.optimizer) 
@@ -186,7 +193,11 @@ class Trainer:
 
             # Performance metrics
             total_loss_epoch += loss_batch
-            preds             = torch.argmax(logits.reshape(-1, self.num_classes), axis=1)
+            
+            if not alternate_objective:
+              preds             = torch.argmax(logits.reshape(-1, self.num_classes), axis=1)
+            else:
+              preds             = torch.argmax(logits.reshape(-1, self.num_classes//2 + 1), axis=1)
             target            = id_batch.reshape(-1)
             mask              = (target != -100)
             num_correct      += int((target[mask] == preds[mask]).sum())

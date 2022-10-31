@@ -46,9 +46,10 @@ if __name__ == '__main__':
     parser.add_argument('--data_dir', help="data directory")
     parser.add_argument('--model_dir', help="model directory")
     parser.add_argument('--model_file', help="model_file")
-    parser.add_argument('--model_name', type=str, default="allenai/scibert_scivocab_cased", help="resume training")
+    parser.add_argument('--model_name', type=str, default="allenai/scibert_scivocab_uncased", help="resume training")
     parser.add_argument('--predictions_dir', help="predictions directory")
     parser.add_argument('--loss_weights', help="weights for loss function")
+    parser.add_argument('--alternate_training', help="alternate_training")
 
 
     args, _ = parser.parse_known_args()
@@ -89,19 +90,19 @@ if __name__ == '__main__':
     
     optimizer = AdamW(model.parameters(), lr=args.lr)
     schedular = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=2, factor=0.5, min_lr=1e-8)
-    # criterion = torch.nn.CrossEntropyLoss()
-    with open(args.loss_weights, 'rb') as f:
-      loss_weights = pickle.load(f)
-    criterion = torch.hub.load(
-      'adeelh/pytorch-multi-class-focal-loss',
-      model='focal_loss',
-      alpha=loss_weights,
-      gamma=2,
-      reduction='mean',
-      device='cuda',
-      dtype=torch.float32,
-      force_reload=True
-    )
+    criterion = torch.nn.CrossEntropyLoss()
+    # with open(args.loss_weights, 'rb') as f:
+    #   loss_weights = pickle.load(f)
+    # criterion = torch.hub.load(
+    #   'adeelh/pytorch-multi-class-focal-loss',
+    #   model='focal_loss',
+    #   alpha=loss_weights,
+    #   gamma=2,
+    #   reduction='mean',
+    #   device='cuda',
+    #   dtype=torch.float32,
+    #   force_reload=True
+    # )
 
     print("Model Training begins")
     if args.training:
@@ -116,7 +117,8 @@ if __name__ == '__main__':
                         device,
                         args.model_dir,
                         NUM_LABELS,
-                        resume = args.resume)
+                        resume = args.resume,
+                        alternate_objective=args.alternate_training)
 
         trainer.fit()
     

@@ -81,7 +81,8 @@ class Trainer:
         num_classes,
         resume,
         inference=False,
-        test_loader=None):
+        test_loader=None,
+        alternate_objective=False):
 
         self.model        = model
         self.epochs       = epochs
@@ -96,6 +97,7 @@ class Trainer:
         self.num_classes  = num_classes
         self.inference    = inference
         self.test_loader  = test_loader
+        self.alternate_objective = alternate_objective
 
         # Mixed precision
         self.scaler = torch.cuda.amp.GradScaler()
@@ -117,9 +119,12 @@ class Trainer:
             return predictions
 
         is_best = False
+        alternate_objective = 0
 
         for epoch in range(self.start_epoch, self.epochs+1):
-            train_loss, train_acc = self.trainEpoch()
+            if self.alternate_objective:
+              alternate_objective^=1
+            train_loss, train_acc = self.trainEpoch(alternate_objective)
             dev_loss,   dev_acc   = self.validateEpoch()
 
             self.epochVerbose(epoch, train_loss, train_acc, dev_loss, dev_acc)
@@ -138,7 +143,7 @@ class Trainer:
             self.save_checkpoint(epoch, is_best)
 
 
-    def trainEpoch(self):
+    def trainEpoch(self, alternate_objective=0):
         '''
             Train model for ONE epoch
         '''
@@ -162,12 +167,17 @@ class Trainer:
             if torch.where(id_batch!=-100)[0].shape[0] == 0:
               continue
 
+            if alternate_objective:
+              orig_shape = id_batch.shape
+              labels = id_batch.flatten()
+              
+
             # Get predictions (forward pass)
             self.optimizer.zero_grad()
         
             # Mixed precision
             with torch.cuda.amp.autocast():  
-                logits = self.model(im_batch)
+                logits = self.model(im_batch, alternate_objective)
                 loss_batch = self.criterion(logits.reshape(-1, self.num_classes), id_batch.reshape(-1))      
             
             self.scaler.scale(loss_batch).backward()

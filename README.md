@@ -13,6 +13,8 @@
 		python train.py --model_dir '<model_save_dir>' --data_dir '<path to conll file>' --loss_weights '<class_wise_weights_for_loss_func>' --alternate_training 0
 
 
+# Final Report
+[Report](https://drive.google.com/file/d/15TA33X_VCmNIrxI6YwRdV_vLR0hH3rJI/view?usp=share_link)
 
 
 # Team Members

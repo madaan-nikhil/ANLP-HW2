@@ -9,8 +9,7 @@
 | SciBERT alternate (D)      | Ours          | 88.30              | 0.512              | xx   |             
 | SciBERT FocalLoss (E)      | Ours          | 80.04              | 0.42              | 0.21 |
 
-
-    *Check for istallation by Opening up a Python prompt by running the following:
+# Training the model
 		python train.py --model_dir '<model_save_dir>' --data_dir '<path to conll file>' --loss_weights '<class_wise_weights_for_loss_func>' --alternate_training 0
 
 
